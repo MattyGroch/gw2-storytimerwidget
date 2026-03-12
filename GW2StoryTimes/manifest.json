@@ -17,5 +17,5 @@
     }
   ],
   "directories": ["storytimes-data"],
-  "enabled_without_gw2": true
+  "enabled_without_gw2": false
 }
