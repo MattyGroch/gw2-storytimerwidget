@@ -1,0 +1,1 @@
+This is a BlishHUD module that utilizes the API from gw2storytimes.com to surface time estimations in-game for completing any given story quest. In addition, it has built-in functionality to allow users to track their own time via a stop watch, then submit their runs back to gw2storytimes.com to help the community database.
