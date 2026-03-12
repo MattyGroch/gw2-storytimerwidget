@@ -1,4 +1,4 @@
-﻿# Story Times ΓÇö BlishHUD Module
+﻿# Story Times BlishHUD Module
 
 A [Blish HUD](https://blishhud.com/) module that brings [GW2 Story Times](https://gw2storytimes.com) into Guild Wars 2. Browse community time estimates for every story mission, time your own runs, and submit your completion times, all without leaving the game.
 
@@ -153,4 +153,5 @@ Contributions are welcome! Please open an issue or pull request on [GitHub](http
 ## License
 
 This project is open source. See the repository for license details.
+
 
