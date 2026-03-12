@@ -301,21 +301,24 @@ namespace GW2StoryTimes.UI
             var elapsedMins = timer.Elapsed.TotalMinutes;
             var ratio = elapsedMins / estimateMins;
 
-            if (ratio < 0.75)
+            if (ratio >= 0.90 && ratio <= 1.10)
             {
                 _timerLabel.TextColor = ColorOnPace;
-                _statusLabel.Text = $"On pace (est. ~{estimate.FormattedEstimate})";
+                _statusLabel.Text = $"On target (est. ~{estimate.FormattedEstimate})";
             }
-            else if (ratio < 1.0)
+            else if (ratio >= 0.75 && ratio <= 1.25)
             {
                 _timerLabel.TextColor = ColorApproaching;
-                _statusLabel.Text = $"Approaching estimate (~{estimate.FormattedEstimate})";
+                var direction = ratio < 1.0 ? "ahead of" : "behind";
+                _statusLabel.Text = $"Slightly {direction} estimate (~{estimate.FormattedEstimate})";
             }
             else
             {
                 _timerLabel.TextColor = ColorOvertime;
-                var overBy = elapsedMins - estimateMins;
-                _statusLabel.Text = $"Over estimate by ~{overBy:F0} min";
+                var direction = ratio < 1.0
+                    ? $"{estimateMins - elapsedMins:F0} min ahead"
+                    : $"{elapsedMins - estimateMins:F0} min behind";
+                _statusLabel.Text = $"Well outside estimate ({direction})";
             }
         }
 

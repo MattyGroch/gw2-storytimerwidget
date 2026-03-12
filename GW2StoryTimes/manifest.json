@@ -1,6 +1,6 @@
 {
   "name": "Story Times",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "namespace": "mattygroch.storytimes",
   "package": "GW2StoryTimes.dll",
   "manifest_version": 1,
