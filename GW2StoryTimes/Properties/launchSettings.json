@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "GW2StoryTimes": {
+      "commandName": "Executable",
+      "executablePath": "S:\\GW2 - BlishHUD\\Blish HUD.exe",
+      "commandLineArgs": "--debug --module \"$(TargetDir)GW2StoryTimes.bhm\""
+    }
+  }
+}

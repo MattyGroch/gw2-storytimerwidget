@@ -1,0 +1,21 @@
+{
+  "name": "Story Times",
+  "version": "0.1.0",
+  "namespace": "mattygroch.storytimes",
+  "package": "GW2StoryTimes.dll",
+  "manifest_version": 1,
+  "description": "Shows time estimates for story missions from gw2storytimes.com. Includes an in-game timer and community feedback system.",
+  "dependencies": {
+    "bh.blishhud": ">=1.2.0"
+  },
+  "url": "https://github.com/MattyGroch/gw2-storytimerwidget",
+  "contributors": [
+    {
+      "name": "MattyGroch",
+      "username": "MattyGroch.1036",
+      "url": "https://github.com/MattyGroch"
+    }
+  ],
+  "directories": ["storytimes-data"],
+  "enabled_without_gw2": true
+}
