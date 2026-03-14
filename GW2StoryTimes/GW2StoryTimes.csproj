@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BlishHUD" Version="1.2.*">
+    <PackageReference Include="BlishHUD" Version="1.2.*" ExcludeAssets="runtime;contentFiles;analyzers" />
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
