@@ -14,13 +14,15 @@ namespace GW2StoryTimes.UI
         private readonly Mission _mission;
         private readonly TimeSpan _elapsed;
         private readonly TimeEstimate _estimate;
+        private readonly SubmissionCategory _preferredCategory;
         private bool _isSubmitting;
 
-        public FeedbackPrompt(Mission mission, TimeSpan elapsed, TimeEstimate estimate)
+        public FeedbackPrompt(Mission mission, TimeSpan elapsed, TimeEstimate estimate, SubmissionCategory preferredCategory)
         {
             _mission = mission;
             _elapsed = elapsed;
             _estimate = estimate;
+            _preferredCategory = preferredCategory;
 
             Width = 420;
             Height = 180;
@@ -96,25 +98,27 @@ namespace GW2StoryTimes.UI
                 Parent = this
             };
 
-            var submitFullButton = new StandardButton
-            {
-                Text = "Submit as Full Experience",
-                Width = 200,
-                Height = 30,
-                Location = new Point(20, 100),
-                Parent = this
-            };
-            submitFullButton.Click += (s, e) => Task.Run(() => Submit("full"));
+            var preferFull = _preferredCategory == SubmissionCategory.Full;
 
-            var submitSpeedButton = new StandardButton
+            var primaryButton = new StandardButton
             {
-                Text = "Submit as Speedrun",
-                Width = 160,
-                Height = 30,
-                Location = new Point(230, 100),
+                Text = preferFull ? "Submit as Full Experience" : "Submit as Speedrun",
+                Width = 220,
+                Height = 32,
+                Location = new Point(20, 98),
                 Parent = this
             };
-            submitSpeedButton.Click += (s, e) => Task.Run(() => Submit("speed"));
+            primaryButton.Click += (s, e) => Task.Run(() => Submit(preferFull ? "full" : "speed"));
+
+            var secondaryButton = new StandardButton
+            {
+                Text = preferFull ? "Submit as Speedrun" : "Submit as Full Experience",
+                Width = 150,
+                Height = 28,
+                Location = new Point(248, 100),
+                Parent = this
+            };
+            secondaryButton.Click += (s, e) => Task.Run(() => Submit(preferFull ? "speed" : "full"));
 
             var dismissButton = new StandardButton
             {
@@ -136,9 +140,9 @@ namespace GW2StoryTimes.UI
             var apiClient = GW2StoryTimesModule.Instance?.ApiClient;
             if (apiClient == null) return;
 
-            var success = await apiClient.SubmitTimeAsync(_mission.Id, category, durationMins);
+            var result = await apiClient.SubmitTimeAsync(_mission.Id, category, durationMins);
 
-            if (success)
+            if (result.Success)
             {
                 ScreenNotification.ShowNotification(
                     $"Story Times: Time submitted for {_mission.Name}!",
@@ -147,7 +151,7 @@ namespace GW2StoryTimes.UI
             else
             {
                 ScreenNotification.ShowNotification(
-                    "Story Times: Submission failed. Try again later.",
+                    $"Story Times: {result.Error}",
                     ScreenNotification.NotificationType.Warning);
             }
 

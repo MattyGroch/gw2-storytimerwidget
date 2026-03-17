@@ -178,6 +178,9 @@ namespace GW2StoryTimes.UI
             _estimateLabel.Text = estimate?.FormattedEstimate != null
                 ? $"~{estimate.FormattedEstimate}"
                 : "";
+            _estimateLabel.BasicTooltipText = estimate?.FormattedRange != null
+                ? $"Range: {estimate.FormattedRange}"
+                : null;
         }
 
         private void ClearMission()
@@ -336,7 +339,13 @@ namespace GW2StoryTimes.UI
 
             if (mission == null || timer == null) return;
 
+            _submitButton.Enabled = false;
             module.ShowFeedbackPrompt(mission, timer.Elapsed);
+        }
+
+        internal void ReenableSubmit()
+        {
+            _submitButton.Enabled = true;
         }
     }
 }

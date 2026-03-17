@@ -172,7 +172,9 @@ namespace GW2StoryTimes.UI
             if (_selectedSeasonId != seasonSummary.Id)
                 return;
 
-            _detailHeader.Text = season.Name;
+            var totalMins = seasonSummary.TotalFullMins;
+            var totalFormatted = totalMins > 0 ? $" — {FormatMins(totalMins)} total" : "";
+            _detailHeader.Text = $"{season.Name}{totalFormatted}";
 
             var playerRace = GetPlayerRace();
             var hasRaceBranching = season.Stories.Any(s => s.Races != null && s.Races.Count > 0);
@@ -222,6 +224,11 @@ namespace GW2StoryTimes.UI
                         ? $" ({estimate.Submissions} reports)"
                         : "";
 
+                    var rangeText = estimate?.FormattedRange;
+                    var tooltip = rangeText != null
+                        ? $"Range: {rangeText} ({estimate.Submissions} reports)"
+                        : null;
+
                     var missionRow = new Panel
                     {
                         Width = 310,
@@ -249,6 +256,7 @@ namespace GW2StoryTimes.UI
                         AutoSizeWidth = true,
                         HorizontalAlignment = HorizontalAlignment.Right,
                         Location = new Point(200, 4),
+                        BasicTooltipText = tooltip,
                         Parent = missionRow
                     };
 

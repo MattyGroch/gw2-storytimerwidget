@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,10 +17,12 @@ namespace GW2StoryTimes.Services
         private static readonly Logger Logger = Logger.GetLogger<StoryTimesApiClient>();
 
         private const string BaseUrl = "https://api.gw2storytimes.com/v1";
+        private const string SeasonsCacheFile = "seasons.json";
 
         private readonly HttpClient _httpClient;
         private readonly ConcurrentDictionary<int, CachedItem<Mission>> _missionCache = new ConcurrentDictionary<int, CachedItem<Mission>>();
         private readonly TimeSpan _cacheTtl = TimeSpan.FromMinutes(15);
+        private readonly string _cacheDir;
 
         private List<Season> _seasons;
 
@@ -31,6 +34,15 @@ namespace GW2StoryTimes.Services
                 Timeout = TimeSpan.FromSeconds(10)
             };
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "GW2StoryTimes-BlishHUD/0.1.0");
+
+            try
+            {
+                _cacheDir = GW2StoryTimesModule.Instance?.DirectoriesManager?.GetFullDirectoryPath("storytimes-data");
+            }
+            catch
+            {
+                _cacheDir = null;
+            }
         }
 
         public async Task PreloadSeasonsAsync()
@@ -40,11 +52,16 @@ namespace GW2StoryTimes.Services
                 var response = await _httpClient.GetStringAsync("/v1/seasons");
                 _seasons = JsonConvert.DeserializeObject<List<Season>>(response);
                 Logger.Info($"Loaded {_seasons?.Count ?? 0} seasons from Story Times API.");
+                WriteDiskCache(SeasonsCacheFile, response);
             }
             catch (Exception ex)
             {
                 Logger.Warn($"Failed to preload seasons: {ex.Message}");
-                _seasons = new List<Season>();
+                _seasons = ReadDiskCache<List<Season>>(SeasonsCacheFile);
+                if (_seasons != null && _seasons.Count > 0)
+                    Logger.Info($"Loaded {_seasons.Count} seasons from disk cache.");
+                else
+                    _seasons = new List<Season>();
             }
         }
 
@@ -85,7 +102,7 @@ namespace GW2StoryTimes.Services
             }
         }
 
-        public async Task<bool> SubmitTimeAsync(int missionId, string category, double durationMins)
+        public async Task<SubmitResult> SubmitTimeAsync(int missionId, string category, double durationMins)
         {
             try
             {
@@ -103,16 +120,65 @@ namespace GW2StoryTimes.Services
                 {
                     Logger.Info($"Submitted time for mission {missionId}: {durationMins:F1} min ({category})");
                     _missionCache.TryRemove(missionId, out _);
-                    return true;
+                    return SubmitResult.Ok();
                 }
 
-                Logger.Warn($"Submission failed for mission {missionId}: HTTP {(int)response.StatusCode}");
-                return false;
+                var body = await response.Content.ReadAsStringAsync();
+                var errorMsg = "Submission failed. Try again later.";
+                try
+                {
+                    var parsed = JsonConvert.DeserializeAnonymousType(body, new { error = "" });
+                    if (!string.IsNullOrEmpty(parsed?.error))
+                        errorMsg = parsed.error;
+                }
+                catch { }
+
+                Logger.Warn($"Submission failed for mission {missionId}: HTTP {(int)response.StatusCode} — {errorMsg}");
+                return SubmitResult.Fail(errorMsg);
             }
             catch (Exception ex)
             {
                 Logger.Warn($"Submission error for mission {missionId}: {ex.Message}");
-                return false;
+                return SubmitResult.Fail("Network error. Check your connection.");
+            }
+        }
+
+        public class SubmitResult
+        {
+            public bool Success { get; private set; }
+            public string Error { get; private set; }
+
+            public static SubmitResult Ok() => new SubmitResult { Success = true };
+            public static SubmitResult Fail(string error) => new SubmitResult { Success = false, Error = error };
+        }
+
+        private void WriteDiskCache(string filename, string json)
+        {
+            if (_cacheDir == null) return;
+            try
+            {
+                File.WriteAllText(Path.Combine(_cacheDir, filename), json);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Failed to write cache file {filename}: {ex.Message}");
+            }
+        }
+
+        private T ReadDiskCache<T>(string filename) where T : class
+        {
+            if (_cacheDir == null) return null;
+            try
+            {
+                var path = Path.Combine(_cacheDir, filename);
+                if (!File.Exists(path)) return null;
+                var json = File.ReadAllText(path);
+                return JsonConvert.DeserializeObject<T>(json);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Failed to read cache file {filename}: {ex.Message}");
+                return null;
             }
         }
 
