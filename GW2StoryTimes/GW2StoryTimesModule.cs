@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Linq;
 using System.Threading.Tasks;
 using Blish_HUD;
 using Blish_HUD.Content;
@@ -34,6 +36,7 @@ namespace GW2StoryTimes
         private StoryTimesWidget _widget;
         private StoryTimesWindow _selectorWindow;
         private FeedbackPrompt _feedbackPrompt;
+        private NextMissionPrompt _nextMissionPrompt;
 
         internal Mission ActiveMission { get; set; }
 
@@ -103,6 +106,7 @@ namespace GW2StoryTimes
             _widget?.Dispose();
             _selectorWindow?.Dispose();
             _feedbackPrompt?.Dispose();
+            _nextMissionPrompt?.Dispose();
             ApiClient?.Dispose();
             TimerService?.Dispose();
 
@@ -198,15 +202,101 @@ namespace GW2StoryTimes
                 ScreenNotification.ShowNotification(
                     $"Story Times: Time submitted for {mission.Name}!",
                     ScreenNotification.NotificationType.Info);
+                OnSubmissionCompleted(mission);
             }
             else
             {
                 ScreenNotification.ShowNotification(
                     $"Story Times: {result.Error}",
                     ScreenNotification.NotificationType.Warning);
+                _widget?.ReenableSubmit();
+            }
+        }
+
+        internal void OnSubmissionCompleted(Mission submittedMission)
+        {
+            ActiveMission = null;
+            TimerService?.Reset();
+            _widget?.ReenableSubmit();
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var nextMission = await FindNextMissionAsync(submittedMission);
+                    if (nextMission != null)
+                        ShowNextMissionPrompt(nextMission);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"Failed to find next mission: {ex.Message}");
+                }
+            });
+        }
+
+        private async Task<Mission> FindNextMissionAsync(Mission current)
+        {
+            if (current == null || string.IsNullOrEmpty(current.SeasonId)) return null;
+
+            var season = await ApiClient.GetSeasonAsync(current.SeasonId);
+            if (season?.Stories == null) return null;
+
+            var playerRace = GetPlayerRace();
+            var allMissions = new List<(Mission mission, string storyName)>();
+
+            foreach (var story in season.Stories.OrderBy(s => s.Order))
+            {
+                if (story.Races != null && story.Races.Count > 0 && playerRace != null)
+                {
+                    if (!story.Races.Contains(playerRace))
+                        continue;
+                }
+
+                if (story.Missions == null) continue;
+
+                foreach (var mission in story.Missions.OrderBy(m => m.Order))
+                {
+                    allMissions.Add((mission, story.Name));
+                }
             }
 
-            _widget?.ReenableSubmit();
+            for (int i = 0; i < allMissions.Count - 1; i++)
+            {
+                if (allMissions[i].mission.Id == current.Id)
+                {
+                    var next = allMissions[i + 1].mission;
+                    if (string.IsNullOrEmpty(next.SeasonName))
+                        next.SeasonName = season.Name;
+                    if (string.IsNullOrEmpty(next.StoryName))
+                        next.StoryName = allMissions[i + 1].storyName;
+                    if (string.IsNullOrEmpty(next.SeasonId))
+                        next.SeasonId = season.Id;
+                    return next;
+                }
+            }
+
+            return null;
+        }
+
+        private void ShowNextMissionPrompt(Mission nextMission)
+        {
+            _nextMissionPrompt?.Dispose();
+            _nextMissionPrompt = new NextMissionPrompt(nextMission)
+            {
+                Parent = GameService.Graphics.SpriteScreen
+            };
+        }
+
+        private static string GetPlayerRace()
+        {
+            try
+            {
+                return GameService.Gw2Mumble.PlayerCharacter.Race.ToString();
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

@@ -147,6 +147,7 @@ namespace GW2StoryTimes.UI
                 ScreenNotification.ShowNotification(
                     $"Story Times: Time submitted for {_mission.Name}!",
                     ScreenNotification.NotificationType.Info);
+                GW2StoryTimesModule.Instance?.OnSubmissionCompleted(_mission);
             }
             else
             {
